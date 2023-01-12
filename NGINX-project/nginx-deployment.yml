@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+  namespace: nginx-development
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nginx-application
+  template:
+    metadata:
+      labels:
+        app: nginx-application
+    spec:
+      securityContext:
+       runAsUser: 101
+       runAsGroup: 101
+      containers:
+      - name: nginx-containers
+        image: nginx:non-root
+        resources:
+          limits:
+            memory: "512Mi"
+            cpu: "750m"
+        ports:
+        - containerPort: 8080
+        volumeMounts:
+        - name: nginx-configuration
+          readOnly: true
+          mountPath: /etc/nginx/conf.d
+        - name: html-configuration
+          readOnly: true
+          mountPath: /usr/share/nginx/html/
+      volumes:
+      - name: nginx-configuration
+        configMap: 
+          name: nginx-configmap
+          items:
+            - key: nginx.conf
+              path: nginx.conf
+      - name: html-configuration
+        configMap: 
+          name: html-configmap
+          items:
+            - key: html.conf
+              path: index.html
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-service
+  namespace: nginx-development
+spec:
+  type: LoadBalancer
+  selector:
+    app: nginx-application
+  ports:
+  - port: 6547
+    targetPort: 8080
